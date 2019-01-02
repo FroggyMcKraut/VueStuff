@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- TODO
+            1. Add title attribute to create tooltips
+            2. Update layout to grid or flex
+            3. Add checkboxes and behavior to cross out item
+            4. Fix styling when bootstrap is removed
+            5. Fancy transition when adding/deleting
+            6. Buttons or checkbox to show/hide DONE items
+            7. Button to delete all DONE items
+            8. EDIT last item by pressing up arrow or by double-clicking item
+            9. Undo delete functionality
+        -->
+        <title>Demo</title>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="description" content="Demo project">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://unpkg.com/vue"></script>
+
+        <style type="text/css">
+            * {
+                box-sizing: border-box;
+            }
+            html { font-size: .875rem; }
+            body { padding: 20px 0 0 20px; font-family: sans-serif; line-height: 1.5; color: #222; }
+            .component {
+                height: 300px;
+                max-width: 400px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                /*font-size: .875rem;*/
+            }
+            .list-outer {
+                height: calc(100% - 22px);
+                overflow: auto;
+            }
+            .list-outer p {
+                margin-top: 120px;
+                text-align: center;
+            }
+            .new-item {
+                width: 100%;
+                padding-left: 8px;
+                font-size: 1rem;
+            }
+            .item-list {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+            .item-list .list-item {
+                padding: 5px 10px;
+                background-color: #f6f6f6;
+                border-bottom: 1px dotted #ccc;
+                display: grid;
+                grid-gap: 10px;
+                justify-content: space-between;
+                align-content: space-around;
+                grid-template-columns: 1fr 25px;
+
+            }
+            .item-list span {
+                /*
+                display: inline-block;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 80%;
+                */
+            }
+            .item-list button {
+                /*
+                float: right;
+                clear: right;
+                height: 22px;
+                line-height: 18px;
+                */
+            }
+
+        </style>
+    </head>
+    <body>
+        <div id="app" class="component">
+            <div class="list-outer">
+                <ul class="item-list" v-if="items.length">
+                    <list-item v-for="(item, index) in items" v-bind:item="item" v-bind:title="item.text" v-bind:index="index" v-bind:key="item.id" v-on:remove="remove(index)"></list-item>
+                </ul>
+                <p v-else>You have no to-do items</p>
+            </div>
+            <input type="text" class="new-item" :placeholder="placeholder" v-model="workingValue" v-on:keyup.enter="add($event)">
+        </div>
+
+        <script type="text/javascript">
+            Vue.component('list-item', {
+                props: ['item', 'index', 'title'],
+                data: function() {
+                    return {}
+                },
+                template: `<li class="list-item"><span :title="title">{{ item.text }}</span><button v-on:click="$emit('remove')">X</button></li>`
+            })
+            var vm = new Vue({
+              el: '#app',
+              data: {
+                items: [
+                    { id: 0, text: "Item 1" },
+                    { id: 1, text: "Item 2"}
+                ],
+                nextItemId: 2,
+                placeholder: 'Add an item...',
+                workingValue: ''
+              },
+              methods: {
+                add: function(event) {
+                    this.items.push({ id: this.nextItemId++, text: event.target.value });
+                    this.workingValue = '';
+                },
+                remove: function(index) {
+                    this.items.splice(index, 1);
+                }
+              }
+            });
+        </script>
+    </body>
+</html>

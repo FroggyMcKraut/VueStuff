@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- TODO
+           x 1. Add title attribute to create tooltips
+           x 2. Update layout to grid or flex
+           x 3. Add checkboxes and behavior to cross out item
+           x 4. Fix styling when bootstrap is removed
+           x 5. Fancy transition when adding/deleting
+           x 6. Buttons or checkbox to show/hide DONE items
+           x 7. Button to delete all DONE items
+           x 8. EDIT last item by pressing up arrow or by double-clicking item
+            9. Undo delete functionality, may only make sense on v1 with individual delete buttons
+            10. Make entire app components
+            11. Make app template-able
+            12. Save data to localstorage
+        -->
+        <title>Demo</title>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="description" content="Demo project">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://unpkg.com/vue"></script>
+
+        <style type="text/css">
+            * {
+                box-sizing: border-box;
+            }
+            html { font-size: .875rem; }
+            body { padding: 20px 0 0 20px; font-family: sans-serif; line-height: 1.5; color: #222; }
+            .grid-container { display: grid; grid-gap: 30px; grid-template-columns: 1fr 1fr; }
+            .column {  }
+
+            .component {
+                height: 300px;
+                border: 1px solid #ccc;
+            }
+            .list-outer {
+                height: calc(100% - 25px);
+                overflow: auto;
+            }
+            .list-outer p {
+                margin-top: 120px;
+                text-align: center;
+            }
+            .new-item {
+                width: 100%;
+                height: 26px;
+                padding-left: 8px;
+                padding-bottom: 2px;
+                font-size: 1rem;
+            }
+            .item-list {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+            .item-list .list-item {
+                padding: 5px 10px;
+                background-color: #f6f6f6;
+                border-bottom: 1px dotted #ccc;
+                display: grid;
+                grid-gap: 10px;
+                justify-content: space-between;
+                align-content: space-around;
+                grid-template-columns: 25px 1fr;
+
+            }
+            .item-list span {
+
+            }
+            .item-list button {
+
+            }
+            .item-list .done span {
+                text-decoration: line-through;
+                color: #afafaf;
+                text-decoration-color: black;
+            }
+            .item-list .current {
+                outline: 1px #abc solid;
+                background-color: #ddeeff;
+            }
+            .options {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                padding: 10px;
+            }
+            .options .right {
+                text-align: right;
+            }
+            .options .delete-all {
+                color: red;
+            }
+            .list-trans-enter-active, .list-trans-leave-active {
+                transition: all .25s;
+            }
+            .list-trans-enter, .list-trans-leave-to {
+                opacity: 0;
+                transform: scaleY(0);
+            }
+
+
+        </style>
+    </head>
+    <body>
+        <div class="grid-container">
+            <div class="column" id="list1">
+                <div class="component">
+                    <div class="list-outer">
+                        <ul class="item-list" v-if="items.length">
+                            <transition-group name="list-trans">
+                            <list-item 
+                                v-for="(item, index) in items" 
+                                :item="item" 
+                                :class="{done: item.done, current: editMode && (item.id == editedItemId)}" 
+                                :key="item.id" 
+                                @remove="remove(index)" 
+                                @mark-done="markDone($event)" 
+                                v-show="!item.done || (item.done && showDone)">
+                            </list-item>
+                            </transition-group>
+                        </ul>
+                        <p v-else>You have no to-do items</p>
+                    </div>
+                    <list-input
+                        v-model="workingValue"
+                        :placeholder="placeholder"
+                        @add="add($event)"
+                        @edit-mode-navigation="editModeNavigation($event)"
+                        @reset="reset()">
+                    </list-input>
+                </div>
+                <list-options
+                    :show-done="showDone"
+                    delete-button-text="Delete All Completed Items"
+                    @hide-done="hideDone($event)"
+                    @clear-done="clearDone($event)"> 
+                </list-options>
+            </div>
+
+            <div class="column" id="list2">
+               <div class="component">
+                    <div class="list-outer">
+                        <ul class="item-list" v-if="items.length">
+                            <transition-group name="list-trans">
+                            <list-item 
+                                v-for="(item, index) in items" 
+                                :item="item" 
+                                :class="{done: item.done, current: editMode && (item.id == editedItemId)}" 
+                                :key="item.id" 
+                                @remove="remove(index)" 
+                                @mark-done="markDone($event)" 
+                                v-show="!item.done || (item.done && showDone)">
+                            </list-item>
+                            </transition-group>
+                        </ul>
+                        <p v-else>You have no to-do items</p>
+                    </div>
+                    <list-input
+                        v-model="workingValue"
+                        :placeholder="placeholder"
+                        @add="add($event)"
+                        @edit-mode-navigation="editModeNavigation($event)"
+                        @reset="reset()">
+                    </list-input>
+                </div>
+                <list-options
+                    :show-done="showDone"
+                    delete-button-text="Delete All Completed Items"
+                    @hide-done="hideDone($event)"
+                    @clear-done="clearDone($event)"> 
+                </list-options>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            Vue.component('list-item', {
+                props: {
+                    item: Object, 
+                    title: String
+                },
+                data: function() {
+                    return {
+                        // title: '',
+                        // done: false
+                    }
+                },
+                template: `<li class="list-item">
+                                <input type="checkbox" 
+                                    :id="item.id" 
+                                    :checked="item.done" 
+                                    @click="$emit('mark-done', $event.target)">
+                                <span :title="title">{{ item.text }}</span>
+                            </li>`
+            });
+            Vue.component('list-input', {
+                props: {
+                    value: String,
+                    placeholder: String
+                },
+                data: function() {
+                    return {}
+                },
+                template: `<input type="text" 
+                            class="new-item" 
+                            :placeholder="placeholder" 
+                            :value="value" 
+                            @input="$emit('input', $event.target.value)" 
+                            @keyup.enter="$emit('add', $event)" 
+                            @keyup.up="$emit('edit-mode-navigation', $event)" 
+                            @keyup.down="$emit('edit-mode-navigation', $event)" 
+                            @keyup.esc="$emit('reset')">`
+            });
+            Vue.component('list-options', {
+                props: {
+                    deleteButtonText: String
+                },
+                data: function() {
+                    return {
+                        checked: true
+                    }
+                },
+                template: `<div class="options">
+                                <label>
+                                    <input type="checkbox"  
+                                        checked="checked"  
+                                        @click="$emit('hide-done', $event)"> 
+                                    Show completed items
+                                </label>
+                                <span class="right">
+                                    <button class="delete-all" @click="$emit('clear-done', $event)">{{ deleteButtonText }}</button>
+                                </span>
+                            </div>`
+            });
+
+            const itemListMethods = {
+                add: function(event) {
+                    if (event.target.value) {
+                        if (this.editMode) {
+                            let newItems = this.items.map(item => {
+                                if (item.id == this.editedItemId) {
+                                    item.text = this.workingValue;
+                                }
+                                return item;
+                            }, this);
+                            this.items = newItems;
+                            this.reset();
+                        } else {
+                            this.items.push({ id: this.nextItemId++, text: event.target.value, done: false, doneDate: null });
+                            this.reset();
+                        }
+                    }
+                },
+                remove: function(index) {
+                    this.items.splice(index, 1);
+                },
+                markDone: function(el) {
+                    let newItems = this.items.map(function(item) {
+                        if (item.id == el.id) {
+                            item.done = el.checked;
+                            item.doneDate = el.checked ? new Date() : null;
+                        }
+                        return item;
+                    });
+                    this.items = newItems;
+
+                },
+                hideDone: function(event) {
+                    this.showDone = event.target.checked;
+                },
+                clearDone: function() {
+                    let newItems = this.items.filter(item => item.done == false);
+                    this.items = newItems;
+                },
+                editLast: function(event) {
+                    const listLength = this.items.length;
+                    if (!listLength) return false;
+                    this.editedItemIndex = this.editedItemIndex ? this.editedItemIndex - 1 : listLength - 1;
+                    if (this.editedItemIndex < 0) return false;
+                    this.workingValue = this.items[this.editedItemIndex].text;
+                    this.editMode = true;
+                    this.editedItemId = this.items[this.editedItemIndex].id;
+                },
+                editModeNavigation: function(event) {
+                    const listLength = this.items.length;
+                    if (!listLength) return false;
+                    const keyCode = event.keyCode;
+                    let itemIndex = this.editedItemIndex;
+                    if (keyCode == 38) { 
+                        /* up key */
+                        itemIndex = this.editMode ? this.editedItemIndex - 1 : listLength - 1;
+                        if (itemIndex < 0) return false;
+
+                        this.editedItemIndex = itemIndex;
+                        this.editMode = true;
+                    } else {
+                        /* presumably the down key */
+                        if (!this.editMode) return false;
+
+                        if (itemIndex + 1 >= listLength) return false;
+                        this.editedItemIndex = itemIndex + 1;
+                    }
+                    this.workingValue = this.items[this.editedItemIndex].text;
+                    this.editedItemId = this.items[this.editedItemIndex].id;
+                },
+                reset: function() {
+                    this.workingValue = '';
+                    this.editMode = false;
+                    this.editedItemId = null;
+                    this.editedItemIndex = null;
+                }
+            }
+
+            var vm = new Vue({
+                el: '#list1',
+                data: {
+                    items: [
+                        { id: 0, text: "Item 1", done: false, doneDate: null },
+                        { id: 1, text: "Item 2", done: true, doneDate: null }
+                    ],
+                    nextItemId: 2,
+                    placeholder: 'Add an item...',
+                    workingValue: '',
+                    showDone: true,
+                    editMode: false,
+                    editedItemId: null,
+                    editedItemIndex: null
+                },
+                methods: itemListMethods
+            });
+            var vm2 = new Vue({
+                el: '#list2',
+                data: {
+                    items: [],
+                    nextItemId: 0,
+                    placeholder: 'Add an item...',
+                    workingValue: '',
+                    showDone: true,
+                    editMode: false,
+                    editedItemId: null,
+                    editedItemIndex: null
+                },
+                methods: itemListMethods
+            });
+        </script>
+    </body>
+</html>
